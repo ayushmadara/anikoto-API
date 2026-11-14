@@ -259,3 +259,20 @@ export interface AnimeTooltip {
   href?: string;
 }
 
+// ─── Watch & Captions ────────────────────────────────────────────────────────
+
+export type {
+  VideoServer,
+  VideoTrack,
+  VideoSource,
+  WatchData,
+  WatchStreamChunk,
+} from './scrapers/watch.scraper';
+
+export type {
+  CaptionCue,
+  CaptionResult,
+  CaptionFormat,
+} from './captions';
+
+

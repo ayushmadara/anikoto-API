@@ -70,7 +70,10 @@ async function _doMegaplay(
   embedUrl?: string,
   mediaType?: string
 ): Promise<ExtractedStream | null> {
-  const match = html.match(/<title>File ([0-9]+)/);
+  const match =
+    html.match(/<title>File ([0-9]+)/i) ||
+    html.match(/data-id=["']([0-9]+)["']/i) ||
+    html.match(/id:\s*['"]?([0-9]+)['"]?/i);
   if (!match) return null;
 
   const id = match[1];
@@ -85,10 +88,25 @@ async function _doMegaplay(
   const typeQs = resolvedType ? `&type=${encodeURIComponent(resolvedType)}` : '';
 
   const reqReferer = embedUrl || referer;
-  const { data } = await axios.get(`https://${host}/stream/getSources?id=${id}${sQs}${typeQs}`, {
-    headers: { ...DEFAULT_HEADERS, 'X-Requested-With': 'XMLHttpRequest', Referer: reqReferer },
-    timeout: 5000,
-  });
+  let data: any = null;
+  try {
+    const res = await axios.get(`https://${host}/stream/getSources?id=${id}${sQs}${typeQs}`, {
+      headers: { ...DEFAULT_HEADERS, 'X-Requested-With': 'XMLHttpRequest', Referer: reqReferer },
+      timeout: 5000,
+    });
+    data = res.data;
+  } catch {
+    try {
+      const fallbackQs = `&platform=OTHER&st=other${sQs}`;
+      const res = await axios.get(`https://${host}/stream/getSources?id=${id}${fallbackQs}`, {
+        headers: { ...DEFAULT_HEADERS, 'X-Requested-With': 'XMLHttpRequest', Referer: reqReferer },
+        timeout: 5000,
+      });
+      data = res.data;
+    } catch {
+      return null;
+    }
+  }
 
   let m3u8: string | undefined = data?.sources?.file || data?.sources?.[0]?.file;
   if (!m3u8 && data?.enc) {

@@ -33,7 +33,7 @@
 
 ## ✨ Features
 
-- 15 REST endpoints covering home, search, filter, anime detail, episodes, related, recommendations, tooltip, schedule, streaming sources (with opening/ending skip ranges), and a streaming proxy
+- 17 REST endpoints covering home, search, filter, anime detail, episodes, related, recommendations, tooltip, schedule, streaming sources (with opening/ending skip ranges), subtitle/caption fetching, and a streaming proxy
 - **High-Volume Proxy Engine**: Zero-copy `ReadableStream` video proxying, multi-node outbound proxy pool routing (`PROXIES` / `PROXY_LIST`), SSRF protection, anti-bot browser header rotation, and exponential backoff retries.
 - Response envelope — every response is `{ ok: true, data: ... }` or `{ ok: false, message: "..." }`
 - In-memory cache (TTL per endpoint) — add `?refresh=1` to any request to bypass
@@ -75,6 +75,7 @@ Open [http://localhost:3000](http://localhost:3000) to see the interactive API d
 | GET | `/api/type/:type?page=` | Browse by media type: `tv`, `movie`, `ova`, `ona`, `special`, `music` (returns `results` & optional `topRated`) |
 | GET | `/api/schedule?tz=&images=` | Weekly airing schedule (optional UTC tz offset in hours and image resolution) |
 | GET | `/api/watch/:slug?ep=` | Streaming sources (m3u8, subtitles, and opening/ending skip ranges) |
+| GET | `/api/captions?url=` | Fetch a subtitle track and return normalized WebVTT (or parsed cues as JSON) |
 | GET | `/api/proxy?url=` | High-volume streaming proxy (CORS bypass, zero-copy streaming, proxy routing) |
 
 See the **full interactive documentation** at `/` (when running locally) or in [`public/openapi.yaml`](./public/openapi.yaml).
@@ -91,6 +92,7 @@ See the **full interactive documentation** at `/` (when running locally) or in [
 | `/api/filter` | 5 minutes |
 | `/api/schedule` | 1 hour |
 | Episodes | 10 minutes |
+| Captions | 24 hours |
 
 Add `?refresh=1` to force a fresh scrape.
 
@@ -98,6 +100,44 @@ Add `?refresh=1` to force a fresh scrape.
 > **Schedule Images:** By default, `/api/schedule` returns an empty string for anime images to keep response times fast (fetching schedule images requires visiting each anime details page). Setting `images=true` will concurrently fetch the poster images for all listed anime with a global concurrency limit of 5.
 
 ---
+
+## 🎬 Captions / Subtitles
+
+Every entry in a source's `tracks[]` array (from `/api/watch/:slug`) has three useful fields:
+
+```json
+{
+  "file": "https://upstream.example/English.srt",
+  "proxyUrl": "/api/proxy?url=...",
+  "captionUrl": "/api/captions?url=...&referer=..."
+}
+```
+
+- `file` — the raw upstream subtitle URL.
+- `proxyUrl` — raw byte passthrough (CORS/Referer bypass only).
+- `captionUrl` — **recommended**: returns normalized `text/vtt`, converting SRT/ASS automatically. Append `&format=json` to get parsed cues (`start`, `end`, `text`) instead.
+
+The endpoint is server-side, so it can send the `Referer` that subtitle CDNs require. Set `PUBLIC_BASE_URL` to your API origin if clients are on a different origin and you want absolute `captionUrl` values; otherwise the URLs are relative.
+
+> [!NOTE]
+> Caption fetching reuses the streaming proxy's SSRF/domain allowlist. If a legitimate subtitle host is rejected, add it to `ALLOWED_PROXY_HOSTS` (comma-separated, wildcards supported).
+
+### Testing captions
+
+Run the offline converter suite (no network required):
+
+```bash
+npm run test:captions
+```
+
+For an end-to-end check, start `npm run dev`, fetch `/api/watch/:slug?ep=1&stream=false`, and request a `tracks[].captionUrl` from the response:
+
+```powershell
+$watch = Invoke-RestMethod "http://localhost:3000/api/watch/your-slug?ep=1&stream=false"
+$track = $watch.data.sources | ForEach-Object { $_.tracks } | Where-Object { $_ } | Select-Object -First 1
+Invoke-WebRequest "http://localhost:3000$($track.captionUrl)" -OutFile caption.vtt
+Get-Content caption.vtt -TotalCount 10
+```
 
 ---
 
@@ -115,6 +155,9 @@ CORS_ALLOWED_ORIGIN=http://localhost:3000,https://your-app.vercel.app
 
 # Optional: Cloudflare Worker URL for streaming proxy
 CF_WORKER_URL=https://your-worker-name.workers.dev
+
+# Optional: Public origin of this API, used to build absolute caption URLs
+# PUBLIC_BASE_URL=https://your-api.vercel.app
 
 # Optional: Comma-separated list of HTTP/HTTPS/SOCKS proxies for outbound routing
 PROXIES=http://user:pass@node1.proxy.com:8080,http://node2.proxy.com:8080
@@ -165,6 +208,7 @@ src/
 │       ├── type/         # GET /api/type/:type
 │       ├── schedule/     # GET /api/schedule
 │       ├── watch/        # GET /api/watch/:slug
+│       ├── captions/     # GET /api/captions
 │       └── proxy/        # GET /api/proxy
 ├── lib/
 │   ├── proxy-pool.ts     # Proxy pool manager & SSRF guard

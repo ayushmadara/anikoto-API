@@ -174,15 +174,26 @@ export async function isPrivateUrlAsync(targetUrl: string): Promise<boolean> {
     const parsed = new URL(targetUrl);
     const hostname = parsed.hostname;
 
-    const addresses = await dns.promises.lookup(hostname, { all: true });
-    for (const addr of addresses) {
-      if (isPrivateIp(addr.address)) {
-        return true;
-      }
-    }
-    return false;
+    // Cloudflare Workers does not implement dns.promises.lookup, so use
+    // resolve4/resolve6 instead. Both are supported in Workers (DNS over
+    // HTTPS) and in Node.js.
+    const resolved = await Promise.allSettled([
+      dns.promises.resolve4(hostname),
+      dns.promises.resolve6(hostname),
+    ]);
+
+    const addresses = resolved.flatMap((result) =>
+      result.status === 'fulfilled' ? result.value : []
+    );
+
+    // No records resolved: the outbound fetch will fail on its own, and the
+    // domain allowlist above is the primary guard. Blocking here would turn a
+    // transient DNS hiccup into a hard 403 for every stream.
+    if (addresses.length === 0) return false;
+
+    return addresses.some((address) => isPrivateIp(address));
   } catch {
-    return true;
+    return false;
   }
 }
 
@@ -203,6 +214,9 @@ const TRUSTED_REFERER_ROOTS = [
   'chiaki.site',
   'anikoto.net',
   'anikototv.to',
+  'anikoto.cz',
+  'mysubsplay.com',
+  'emeralddrift.world',
 ];
 
 // Fast-path allowed CDN domains
@@ -228,6 +242,9 @@ const DEFAULT_ALLOWED_STREAM_DOMAINS = [
   '*.vidtube.site',
   '*.anipixcdn.co',
   '*.chiaki.site',
+  '*.mysubsplay.com',
+  '*.emeralddrift.world',
+  '*.qeltrix.top',
 ];
 
 function getEtld1(hostname: string): string {

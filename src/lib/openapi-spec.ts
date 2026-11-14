@@ -979,7 +979,33 @@ const spec = {
                                     kind: { type: "string", example: "captions" },
                                     default: { type: "boolean", example: true },
                                     proxyUrl: { type: "string", example: "/api/proxy?url=..." },
+                                    captionUrl: { type: "string", example: "/api/captions?url=..." },
                                   },
+                                },
+                              },
+                              captions: {
+                                type: "array",
+                                description: "Subtitle tracks alias for convenience",
+                                items: {
+                                  type: "object",
+                                  properties: {
+                                    file: { type: "string", example: "https://..." },
+                                    label: { type: "string", example: "English" },
+                                    kind: { type: "string", example: "captions" },
+                                    default: { type: "boolean", example: true },
+                                    proxyUrl: { type: "string", example: "/api/proxy?url=..." },
+                                    captionUrl: { type: "string", example: "/api/captions?url=..." },
+                                  },
+                                },
+                              },
+                              thumbnails: {
+                                type: "object",
+                                description: "Scrub thumbnail track if available",
+                                properties: {
+                                  file: { type: "string", example: "https://..." },
+                                  kind: { type: "string", example: "thumbnails" },
+                                  proxyUrl: { type: "string", example: "/api/proxy?url=..." },
+                                  captionUrl: { type: "string", example: "/api/captions?url=..." },
                                 },
                               },
                               skip_data: {
@@ -1005,6 +1031,46 @@ const spec = {
                             },
                           },
                         },
+                        tracks: {
+                          type: "array",
+                          description: "All subtitle tracks aggregated across available sources",
+                          items: {
+                            type: "object",
+                            properties: {
+                              file: { type: "string", example: "https://..." },
+                              label: { type: "string", example: "English" },
+                              kind: { type: "string", example: "captions" },
+                              default: { type: "boolean", example: true },
+                              proxyUrl: { type: "string", example: "/api/proxy?url=..." },
+                              captionUrl: { type: "string", example: "/api/captions?url=..." },
+                            },
+                          },
+                        },
+                        captions: {
+                          type: "array",
+                          description: "Subtitle tracks alias aggregated across available sources",
+                          items: {
+                            type: "object",
+                            properties: {
+                              file: { type: "string", example: "https://..." },
+                              label: { type: "string", example: "English" },
+                              kind: { type: "string", example: "captions" },
+                              default: { type: "boolean", example: true },
+                              proxyUrl: { type: "string", example: "/api/proxy?url=..." },
+                              captionUrl: { type: "string", example: "/api/captions?url=..." },
+                            },
+                          },
+                        },
+                        thumbnails: {
+                          type: "object",
+                          description: "Scrub thumbnail track if available",
+                          properties: {
+                            file: { type: "string", example: "https://..." },
+                            kind: { type: "string", example: "thumbnails" },
+                            proxyUrl: { type: "string", example: "/api/proxy?url=..." },
+                            captionUrl: { type: "string", example: "/api/captions?url=..." },
+                          },
+                        },
                       },
                     },
                   },
@@ -1015,6 +1081,96 @@ const spec = {
           "400": { description: "Missing required ep parameter" },
           "404": { description: "Anime or episode not found" },
           "500": { description: "Internal server error" },
+        },
+      },
+    },
+
+    "/captions": {
+      get: {
+        tags: ["Watch"],
+        summary: "Fetch and normalize a subtitle track",
+        description:
+          "Fetches an upstream subtitle file (VTT, SRT, or ASS) with the required Referer and returns normalized WebVTT, or a parsed cue list when <code>format=json</code>. Use the <code>captionUrl</code> field from any <code>tracks[]</code> entry returned by <code>/watch/{slug}</code>.",
+        operationId: "fetchCaption",
+        parameters: [
+          {
+            name: "url",
+            in: "query",
+            required: true,
+            description: "The upstream subtitle file URL (usually a track's `file` field)",
+            schema: { type: "string" },
+            example: "https://cdn.example.com/subtitles/english.vtt",
+          },
+          {
+            name: "referer",
+            in: "query",
+            required: false,
+            description: "Referer required by the subtitle host (usually the source's `referer` field)",
+            schema: { type: "string" },
+            example: "https://megaplay.buzz/",
+          },
+          {
+            name: "format",
+            in: "query",
+            required: false,
+            description: "`vtt` returns text/vtt; `json` returns parsed cues plus the normalized VTT",
+            schema: { type: "string", enum: ["vtt", "json"] },
+            example: "vtt",
+          },
+          refreshParam,
+        ],
+        responses: {
+          "200": {
+            description: "Normalized WebVTT (default) or JSON cue list",
+            content: {
+              "text/vtt": {
+                schema: {
+                  type: "string",
+                  example: "WEBVTT\n\n00:00:01.000 --> 00:00:04.000\nHello",
+                },
+              },
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    ok: { type: "boolean", example: true },
+                    data: {
+                      type: "object",
+                      properties: {
+                        source: {
+                          type: "string",
+                          enum: ["vtt", "srt", "ass"],
+                          example: "srt",
+                        },
+                        vtt: { type: "string", example: "WEBVTT..." },
+                        cues: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              start: { type: "number", example: 1 },
+                              end: { type: "number", example: 4 },
+                              text: { type: "string", example: "Hello" },
+                              settings: {
+                                type: "string",
+                                example: "align:start",
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "400": { description: "Missing or invalid url/format parameter" },
+          "403": {
+            description: "Caption URL is not allowed or resolves to a private address",
+          },
+          "415": { description: "Unrecognized caption format" },
+          "502": { description: "Upstream caption fetch failed" },
         },
       },
     },

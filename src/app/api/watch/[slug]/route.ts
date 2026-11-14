@@ -1,4 +1,4 @@
-import { scrapeWatchStream, scrapeWatch, WatchData } from '@/lib/scrapers/watch.scraper';
+import { scrapeWatchStream, scrapeWatch, WatchData, dedupeTracks } from '@/lib/scrapers/watch.scraper';
 import { cacheGet, cacheSet } from '@/lib/cache';
 import { CACHE_TTL } from '@/lib/constants';
 import { validateSlug } from '@/lib/validation';
@@ -79,7 +79,17 @@ export async function GET(
             } else if (chunk.type === 'done') {
               // Persist completed result so the next request is an instant cache hit
               if (episode) {
-                const fullData: WatchData = { episode, servers, sources: collectedSources };
+                const allTracks = dedupeTracks(collectedSources.flatMap((s) => s.tracks || []));
+                const dedupedCaptions = allTracks.filter((t) => t.kind !== 'thumbnails');
+                const thumbnails = allTracks.find((t) => t.kind === 'thumbnails');
+                const fullData: WatchData = {
+                  episode,
+                  servers,
+                  sources: collectedSources,
+                  tracks: allTracks,
+                  captions: dedupedCaptions,
+                  thumbnails,
+                };
                 cacheSet(cacheKey, fullData, CACHE_TTL.EPISODE);
               }
             }

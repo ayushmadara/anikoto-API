@@ -48,3 +48,8 @@ extractor.js
 test_episodes.js
 test_schedule.js
 /test/
+.open-next
+.wrangler
+
+.open-next
+.wrangler

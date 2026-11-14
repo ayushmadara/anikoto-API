@@ -2,7 +2,13 @@ import * as cheerio from 'cheerio';
 import { fetchJson } from '../fetcher';
 import { scrapeAnimeEpisodes } from './anime.scraper';
 import { Episode } from '../types';
-import { extractStreamUrl, extractVidstream, SubtitleTrack, IntroOutro } from '../extractors';
+import {
+  extractStreamUrl,
+  extractVidstream,
+  SubtitleTrack,
+  IntroOutro,
+  ExtractedStream,
+} from '../extractors';
 import { BASE_URL } from '../constants';
 
 export interface VideoServer {
@@ -14,6 +20,8 @@ export interface VideoServer {
 
 export interface VideoTrack extends SubtitleTrack {
   proxyUrl?: string;
+  /** Lazy endpoint returning this track normalized to WebVTT. */
+  captionUrl?: string;
 }
 
 export interface VideoSource {
@@ -24,6 +32,10 @@ export interface VideoSource {
   referer?: string; // Required referer for the m3u8 stream
   proxyUrl?: string | null; // The URL to proxy the stream through our backend
   tracks?: VideoTrack[];
+  /** Subtitle tracks (filtered to exclude preview thumbnails). */
+  captions?: VideoTrack[];
+  /** Scrub thumbnail track if available. */
+  thumbnails?: VideoTrack;
   skip_data?: {
     intro?: IntroOutro;
     outro?: IntroOutro;
@@ -34,6 +46,12 @@ export interface WatchData {
   episode: Episode;
   servers: VideoServer[];
   sources: VideoSource[];
+  /** All deduped subtitle & thumbnail tracks discovered across resolved sources. */
+  tracks?: VideoTrack[];
+  /** Deduped subtitle & caption tracks (excludes thumbnail sprites). */
+  captions?: VideoTrack[];
+  /** Scrub thumbnail track if available. */
+  thumbnails?: VideoTrack;
 }
 
 // ── Streaming chunk types ─────────────────────────────────────────────────────
@@ -92,6 +110,90 @@ function makeProxyHelper() {
   };
 }
 
+function makeCaptionUrlHelper() {
+  const rawBaseUrl =
+    process.env.PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || '';
+  let base = rawBaseUrl.trim();
+  if (base && !base.startsWith('http')) base = `https://${base}`;
+  base = base.replace(/\/+$/, '');
+
+  return (file: string, referer: string) =>
+    `${base}/api/captions?url=${encodeURIComponent(file)}&referer=${encodeURIComponent(referer)}`;
+}
+
+export function dedupeTracks<T extends SubtitleTrack>(tracks: T[]): T[] {
+  const seen = new Set<string>();
+  return tracks.filter((track) => {
+    const key = `${track.label ?? ''}|${track.file}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/** Upstream tracks are usually absolute, but resolve relative URLs just in case. */
+function resolveTrackUrl(file: string, embedUrl: string): string {
+  try {
+    return new URL(file, embedUrl).toString();
+  } catch {
+    return file;
+  }
+}
+
+/**
+ * Resolve an embed URL with both extractors.
+ *
+ * The first successful result wins (fast path). If it carries no subtitle
+ * tracks, we give the other extractor a short grace period to supply them —
+ * otherwise whichever extractor happens to win the race can silently discard
+ * captions that the other one found.
+ */
+async function extractWithTrackPreference(
+  embedUrl: string,
+  epReferer: string,
+  mediaType: string
+): Promise<ExtractedStream | null> {
+  const candidates = [
+    extractVidstream(embedUrl, epReferer, mediaType),
+    extractStreamUrl(embedUrl, epReferer, mediaType),
+  ].map((promise) =>
+    promise.then((result) => {
+      if (!result) throw new Error('No result');
+      return result;
+    })
+  );
+
+  let winner: ExtractedStream;
+  try {
+    winner = await Promise.any(candidates);
+  } catch {
+    return null;
+  }
+
+  if (winner.tracks.length > 0) return winner;
+
+  const fallback = await Promise.race<ExtractedStream | null>([
+    Promise.allSettled(candidates).then((settled) => {
+      for (const result of settled) {
+        if (result.status === 'fulfilled' && result.value.tracks.length > 0) {
+          return result.value;
+        }
+      }
+      return null;
+    }),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500)),
+  ]);
+
+  if (!fallback) return winner;
+
+  return {
+    ...winner,
+    tracks: dedupeTracks([...winner.tracks, ...fallback.tracks]),
+    intro: winner.intro ?? fallback.intro,
+    outro: winner.outro ?? fallback.outro,
+  };
+}
+
 function parseSkipData(skipData: unknown): { intro?: IntroOutro; outro?: IntroOutro } {
   const result: { intro?: IntroOutro; outro?: IntroOutro } = {};
   const data = skipData as { intro?: unknown[]; outro?: unknown[] } | undefined;
@@ -121,6 +223,7 @@ function buildSourceTasks(
   getProxyUrl: (url: string, referer?: string) => string
 ): Array<Promise<VideoSource | null>> {
   const epReferer = `${BASE_URL}/watch/${slug}/ep-${epNum}`;
+  const getCaptionUrl = makeCaptionUrlHelper();
 
   // Regular servers
   const serverTasks: Array<Promise<VideoSource | null>> = servers.map(async (server) => {
@@ -157,22 +260,13 @@ function buildSourceTasks(
 
           let extracted: Awaited<ReturnType<typeof extractStreamUrl>> = null;
           if (isVidstreamLike) {
-            // Race VidStream extractor and standard extractor using Promise.any
-            // so we return the first successful result immediately without waiting for the slow/timing out one
-            try {
-              extracted = await Promise.any([
-                extractVidstream(embedUrl, epReferer, server.type).then((res) => {
-                  if (!res) throw new Error('No result');
-                  return res;
-                }),
-                extractStreamUrl(embedUrl, epReferer, server.type).then((res) => {
-                  if (!res) throw new Error('No result');
-                  return res;
-                }),
-              ]);
-            } catch {
-              extracted = null;
-            }
+            // Race both extractors, preferring a result that actually carries
+            // subtitle tracks (see extractWithTrackPreference).
+            extracted = await extractWithTrackPreference(
+              embedUrl,
+              epReferer,
+              server.type
+            );
           } else {
             extracted = await extractStreamUrl(embedUrl, epReferer, server.type);
           }
@@ -181,6 +275,18 @@ function buildSourceTasks(
           const outro = extracted?.outro ?? ajaxSkip.outro;
           const skip_data = (intro || outro) ? { intro, outro } : undefined;
 
+          const tracks: VideoTrack[] = extracted?.tracks?.map((t) => {
+            const trackUrl = resolveTrackUrl(t.file, embedUrl);
+            return {
+              ...t,
+              proxyUrl: getProxyUrl(trackUrl, extracted!.referer),
+              captionUrl: getCaptionUrl(trackUrl, extracted!.referer),
+            };
+          }) || [];
+
+          const captions = tracks.filter((t) => t.kind !== 'thumbnails');
+          const thumbnails = tracks.find((t) => t.kind === 'thumbnails');
+
           const source: VideoSource = {
             server: server.name,
             type: server.type,
@@ -188,10 +294,9 @@ function buildSourceTasks(
             m3u8: extracted?.m3u8 ?? null,
             referer: extracted?.referer,
             proxyUrl: extracted?.m3u8 ? getProxyUrl(extracted.m3u8, extracted.referer) : null,
-            tracks: extracted?.tracks?.map((t) => ({
-              ...t,
-              proxyUrl: getProxyUrl(t.file, extracted!.referer),
-            })) || [],
+            tracks,
+            captions,
+            thumbnails,
             skip_data,
           };
           return source;
@@ -313,5 +418,15 @@ export async function scrapeWatch(slug: string, epNum: string): Promise<WatchDat
   }
 
   if (!episode) throw new Error('No episode data returned from stream');
-  return { episode, servers, sources };
+  const allTracks = dedupeTracks(sources.flatMap((s) => s.tracks || []));
+  const dedupedCaptions = allTracks.filter((t) => t.kind !== 'thumbnails');
+  const thumbnails = allTracks.find((t) => t.kind === 'thumbnails');
+  return {
+    episode,
+    servers,
+    sources,
+    tracks: allTracks,
+    captions: dedupedCaptions,
+    thumbnails,
+  };
 }

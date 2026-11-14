@@ -299,6 +299,98 @@ function remapMirrorUrl(urlStr) {
   }
 }
 
+// ── Subtitle / Caption Normalization Helpers ────────────────────────────────
+function toUnixNewlines(text) {
+  return text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
+}
+
+function detectSubtitleFormat(text, url, contentType) {
+  const head = toUnixNewlines(text).slice(0, 4096).trimStart();
+  if (/^WEBVTT\b/i.test(head)) return 'vtt';
+  if (/\[Script Info\]|\[Events\]/i.test(head)) return 'ass';
+  const timestampLine = head.match(/^\s*\d{1,2}:\d{2}:\d{2}[,.]\d{1,3}\s*-->/m);
+  if (timestampLine) {
+    return /\d{1,2}:\d{2}:\d{2},\d{1,3}\s*-->/.test(head) ? 'srt' : 'vtt';
+  }
+  if (/\.ass($|\?)/i.test(url)) return 'ass';
+  if (/\.srt($|\?)/i.test(url)) return 'srt';
+  if (contentType && /text\/vtt/i.test(contentType)) return 'vtt';
+  return 'vtt';
+}
+
+function srtToVtt(text) {
+  const body = toUnixNewlines(text)
+    .replace(/^[ \t]*\d+[ \t]*\n(?=[ \t]*\d{1,2}:\d{2}:\d{2}[,.]\d{1,3}[ \t]*-->)/gm, '')
+    .replace(/(\d{1,2}:\d{2}:\d{2}),(\d{1,3})/g, '$1.$2')
+    .trim();
+  return `WEBVTT\n\n${body}\n`;
+}
+
+function assToVtt(text) {
+  const out = ['WEBVTT', ''];
+  let inEvents = false;
+  let fields = [];
+
+  const toVttTime = (val) => {
+    const match = val.trim().match(/^(\d+):(\d{2}):(\d{2})[.](\d{1,3})$/);
+    if (!match) return null;
+    const [, hours, minutes, seconds, fraction] = match;
+    return `${hours.padStart(2, '0')}:${minutes}:${seconds}.${fraction.padEnd(3, '0').slice(0, 3)}`;
+  };
+
+  for (const rawLine of toUnixNewlines(text).split('\n')) {
+    const line = rawLine.trim();
+    if (line.startsWith('[')) {
+      inEvents = /^\[events\]$/i.test(line);
+      fields = [];
+      continue;
+    }
+    if (!inEvents) continue;
+    if (/^Format:/i.test(line)) {
+      fields = line.slice('Format:'.length).split(',').map((f) => f.trim().toLowerCase());
+      continue;
+    }
+    if (!/^Dialogue:/i.test(line) || fields.length === 0) continue;
+    const payload = line.slice('Dialogue:'.length).trim();
+    const parts = [];
+    let rest = payload;
+    for (let i = 0; i < fields.length - 1; i++) {
+      const comma = rest.indexOf(',');
+      if (comma === -1) break;
+      parts.push(rest.slice(0, comma));
+      rest = rest.slice(comma + 1);
+    }
+    parts.push(rest);
+    const start = toVttTime(parts[fields.indexOf('start')] ?? '');
+    const end = toVttTime(parts[fields.indexOf('end')] ?? '');
+    if (!start || !end) continue;
+    const textIndex = fields.indexOf('text');
+    const cueText = (textIndex >= 0 ? parts[textIndex] : parts[parts.length - 1])
+      .replace(/\{[^}]*\}/g, '')
+      .replace(/\\N/gi, '\n')
+      .replace(/\\h/gi, ' ')
+      .trim();
+    if (cueText) out.push(`${start} --> ${end}`, cueText, '');
+  }
+  return out.join('\n');
+}
+
+function normalizeVtt(text) {
+  const body = toUnixNewlines(text)
+    .trimStart()
+    .split('\n')
+    .map((line) => line.includes('-->') ? line.replace(/(\d{1,2}:\d{2}:\d{2}),(\d{1,3})/g, '$1.$2') : line)
+    .join('\n');
+  return /^WEBVTT\b/i.test(body) ? body : `WEBVTT\n\n${body}`;
+}
+
+function convertSubtitleToVtt(text, url, contentType) {
+  const fmt = detectSubtitleFormat(text, url, contentType);
+  if (fmt === 'srt') return srtToVtt(text);
+  if (fmt === 'ass') return assToVtt(text);
+  return normalizeVtt(text);
+}
+
 export default {
   async fetch(request, env) {
     // ── Handle CORS Preflight ───────────────────────────────────────────────
@@ -531,10 +623,19 @@ export default {
     if (isSubtitle) {
       resHeaders.set('Content-Type', 'text/vtt; charset=utf-8');
       resHeaders.set('Cache-Control', 'public, max-age=3600');
-      return new Response(upstreamRes.body, {
-        status: upstreamRes.status,
-        headers: resHeaders,
-      });
+      try {
+        const rawText = await upstreamRes.text();
+        const vtt = convertSubtitleToVtt(rawText, targetUrl, contentType);
+        return new Response(vtt, {
+          status: upstreamRes.status,
+          headers: resHeaders,
+        });
+      } catch (_) {
+        return new Response(upstreamRes.body, {
+          status: upstreamRes.status,
+          headers: resHeaders,
+        });
+      }
     }
 
     // ── HLS Manifest Playlist Rewriting ──────────────────────────────────────

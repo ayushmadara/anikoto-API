@@ -46,7 +46,7 @@ tags:
   - name: Schedule
     description: Weekly airing schedule
   - name: Watch
-    description: Streaming sources, SSE streaming, and proxy
+    description: Streaming sources, SSE streaming, subtitle/caption fetching, and proxy
 
 paths:
   /home:
@@ -817,6 +817,94 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/Error'
+
+  /captions:
+    get:
+      tags: [Watch]
+      summary: Fetch and normalize a subtitle track
+      description: >
+        Fetches an upstream subtitle file (VTT, SRT, or ASS) with the required
+        Referer and returns normalized WebVTT, or a parsed cue list when
+        `format=json`. Use the `captionUrl` field on any track returned by
+        `/watch/{slug}`.
+      operationId: fetchCaption
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uri
+          description: The upstream subtitle file URL (usually a track's `file` field)
+          example: "https://cdn.example.com/subtitles/english.vtt"
+        - name: referer
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uri
+          description: Referer required by the subtitle host (usually the source's `referer` field)
+          example: "https://megaplay.buzz/"
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [vtt, json]
+            default: vtt
+          description: >
+            `vtt` returns text/vtt; `json` returns parsed cues plus the
+            normalized VTT.
+        - $ref: '#/components/parameters/refresh'
+      responses:
+        '200':
+          description: Normalized WebVTT (default) or JSON cue list
+          content:
+            text/vtt:
+              schema:
+                type: string
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      source:
+                        type: string
+                        enum: [vtt, srt, ass]
+                        example: srt
+                      vtt:
+                        type: string
+                        example: "WEBVTT..."
+                      cues:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            start:
+                              type: number
+                              example: 1
+                            end:
+                              type: number
+                              example: 4
+                            text:
+                              type: string
+                              example: "Hello"
+                            settings:
+                              type: string
+                              example: "align:start"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: Caption URL is not allowed or resolves to a private address
+        '415':
+          description: Unrecognized caption format
+        '502':
+          description: Upstream caption fetch failed
 
   /proxy:
     get:
@@ -1631,6 +1719,9 @@ components:
         proxyUrl:
           type: string
           example: "/api/proxy?url=..."
+        captionUrl:
+          type: string
+          example: "/api/captions?url=..."
 
     VideoSource:
       type: object
@@ -1663,6 +1754,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/VideoTrack'
+        captions:
+          type: array
+          description: Subtitle tracks alias for convenience
+          items:
+            $ref: '#/components/schemas/VideoTrack'
+        thumbnails:
+          $ref: '#/components/schemas/VideoTrack'
         skip_data:
           type: object
           nullable: true
@@ -1685,6 +1783,18 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/VideoSource'
+        tracks:
+          type: array
+          description: All subtitle tracks aggregated from available sources
+          items:
+            $ref: '#/components/schemas/VideoTrack'
+        captions:
+          type: array
+          description: Subtitle tracks alias aggregated from available sources
+          items:
+            $ref: '#/components/schemas/VideoTrack'
+        thumbnails:
+          $ref: '#/components/schemas/VideoTrack'
 
     # ─── API Error ─────────────────────────────────────────────────
     ApiError:
