@@ -28,7 +28,7 @@ info:
     Add `?refresh=1` to any cached endpoint to bypass the cache.
   version: "1.0.0"
   contact:
-    name: Teramoto
+    name: ayushmadara
 
 servers:
   - url: https://anikoto-scrap-api.vercel.app/api
@@ -46,7 +46,9 @@ tags:
   - name: Schedule
     description: Weekly airing schedule
   - name: Watch
-    description: Streaming sources, SSE streaming, subtitle/caption fetching, and proxy
+    description: Streaming sources, SSE streaming, and proxy
+  - name: Captions
+    description: Subtitle and caption track fetching, format conversion, and parsing
 
 paths:
   /home:
@@ -820,7 +822,7 @@ paths:
 
   /captions:
     get:
-      tags: [Watch]
+      tags: [Captions]
       summary: Fetch and normalize a subtitle track
       description: >
         Fetches an upstream subtitle file (VTT, SRT, or ASS) with the required

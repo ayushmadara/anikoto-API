@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Anikoto Scraper API",
-  description: "REST API for scraping anikototv.to - anime streaming data",
+  title: "Anikoto Scraper API - by ayushmadara",
+  description: "High-performance REST API for anime streaming data, episodes, and subtitles/captions.",
+  authors: [{ name: "ayushmadara", url: "https://github.com/ayushmadara" }],
 };
 
 export default function RootLayout({

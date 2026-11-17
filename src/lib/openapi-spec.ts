@@ -1087,7 +1087,7 @@ const spec = {
 
     "/captions": {
       get: {
-        tags: ["Watch"],
+        tags: ["Captions"],
         summary: "Fetch and normalize a subtitle track",
         description:
           "Fetches an upstream subtitle file (VTT, SRT, or ASS) with the required Referer and returns normalized WebVTT, or a parsed cue list when <code>format=json</code>. Use the <code>captionUrl</code> field from any <code>tracks[]</code> entry returned by <code>/watch/{slug}</code>.",
