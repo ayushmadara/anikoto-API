@@ -1,231 +1,241 @@
 <div align="center">
 
-  # ⚡ Anikoto Scraper API
+<img src="https://capsule-render.vercel.app/api?type=waving&height=240&color=0:0d1117,50:1b2a05,100:ccff00&text=Anikoto%20API&fontColor=ffffff&fontSize=68&fontAlignY=38&desc=Anime%20metadata%20%C2%B7%20streaming%20sources%20%C2%B7%20captions&descSize=18&descAlignY=60&animation=twinkling" alt="Anikoto API" width="100%" />
 
-  <p><strong>A high-performance, enterprise-grade REST API for scraping anime metadata, streaming sources, and multi-language captions from anikoto.net</strong></p>
+<a href="https://git.io/typing-svg">
+  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=20&duration=2800&pause=800&color=CCFF00&center=true&vCenter=true&width=640&lines=17+REST+endpoints+for+anime+data;Streaming+sources+%2B+HLS+proxy;SRT+%2F+ASS+%2F+VTT+to+WebVTT+on+the+fly;Self-host+on+Vercel+or+Cloudflare" alt="Typing intro" />
+</a>
 
-  <p>
-    <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fayushmadara%2Fanikoto-API"><img src="https://vercel.com/button" alt="Deploy with Vercel"></a>
-  </p>
+<br/><br/>
 
-  <p>
-    <a href="https://nextjs.org"><img src="https://img.shields.io/badge/Next.js-16.4-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js 16"></a>
-    <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript"></a>
-    <a href="https://workers.cloudflare.com"><img src="https://img.shields.io/badge/Cloudflare_Workers-F38020?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Cloudflare Workers"></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-22c55e?style=for-the-badge" alt="MIT License"></a>
-    <a href="https://github.com/ayushmadara/anikoto-API"><img src="https://img.shields.io/badge/Author-ayushmadara-8b5cf6?style=for-the-badge&logo=github&logoColor=white" alt="Author ayushmadara"></a>
-  </p>
+<a href="https://nextjs.org"><img src="https://img.shields.io/badge/Next.js-16-0d1117?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js 16" /></a>
+<a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-5-0d1117?style=for-the-badge&logo=typescript&logoColor=3178C6" alt="TypeScript" /></a>
+<a href="https://workers.cloudflare.com"><img src="https://img.shields.io/badge/Cloudflare%20Workers-0d1117?style=for-the-badge&logo=cloudflare&logoColor=F38020" alt="Cloudflare Workers" /></a>
+<a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-0d1117?style=for-the-badge&logo=opensourceinitiative&logoColor=22c55e" alt="MIT License" /></a>
+<a href="https://github.com/ayushmadara/anikoto-API"><img src="https://img.shields.io/badge/Author-ayushmadara-ccff00?style=for-the-badge&logo=github&logoColor=black" alt="Author" /></a>
 
-  <p>
-    <a href="#-features">Features</a> •
-    <a href="#-architecture">Architecture</a> •
-    <a href="#-quick-start">Quick Start</a> •
-    <a href="#-api-reference">API Endpoints</a> •
-    <a href="#-captions--subtitles-engine">Captions Engine</a> •
-    <a href="#-cloudflare-worker-proxy">Cloudflare Proxy</a> •
-    <a href="#%EF%B8%8F-project-structure">Project Structure</a>
-  </p>
+<br/><br/>
+
+<a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fayushmadara%2Fanikoto-API"><img src="https://vercel.com/button" alt="Deploy with Vercel" /></a>
+
+<br/><br/>
+
+<a href="#features">Features</a> &nbsp;•&nbsp;
+<a href="#architecture">Architecture</a> &nbsp;•&nbsp;
+<a href="#quick-start">Quick Start</a> &nbsp;•&nbsp;
+<a href="#api-reference">API</a> &nbsp;•&nbsp;
+<a href="#captions-engine">Captions</a> &nbsp;•&nbsp;
+<a href="#cloudflare-worker">Cloudflare</a> &nbsp;•&nbsp;
+<a href="#project-structure">Structure</a>
 
 </div>
 
----
+<br/>
 
 > [!WARNING]
-> **For educational and research purposes only.** This project is an independent open-source project and is not affiliated with, sponsored by, or endorsed by anikoto.net or any streaming providers. All scraped data, media files, and trademarks belong to their respective copyright holders.
+> **For educational and research purposes only.** This is an independent open-source project and is not affiliated with, sponsored by, or endorsed by anikoto.net or any streaming provider. All scraped data, media and trademarks belong to their respective owners.
 
 > [!IMPORTANT]
-> **Self-Hosting Recommended:**
-> Public instances are frequently rate-limited or blocked by upstream CDNs. You are strongly advised to clone and deploy your own private instance on **Vercel**, a **VPS/Node.js host**, or via the bundled **Cloudflare Worker**.
+> **Self-host your own instance.** Public instances are often rate-limited or blocked by upstream CDNs. Deploy a private copy on **Vercel**, a **Node.js VPS**, or use the bundled **Cloudflare Worker** for streaming.
 
----
+<br/>
 
+<a id="features"></a>
 ## ✨ Features
 
 <table>
-  <tr>
-    <td width="50%">
-      <h3>🚀 High-Speed Scraping Core</h3>
-      <ul>
-        <li><strong>17+ REST Endpoints:</strong> Spotlight, latest episodes, recommendations, search, advanced filter, weekly schedule, tooltip preview, and streaming sources.</li>
-        <li><strong>Cheerio & Axios Engine:</strong> Server-side lightweight HTML parsing with anti-bot header rotation and custom User-Agents.</li>
-        <li><strong>Intelligent TTL Caching:</strong> Multi-tiered in-memory caching with <code>?refresh=1</code> instant bypass.</li>
-      </ul>
-    </td>
-    <td width="50%">
-      <h3>💬 Universal Captions & Subtitles</h3>
-      <ul>
-        <li><strong>Auto-Format Conversion:</strong> Transcodes upstream <code>.srt</code>, <code>.ass</code>, and <code>.vtt</code> to standard WebVTT on-the-fly.</li>
-        <li><strong>JSON Cues Parser:</strong> Pass <code>format=json</code> to get structured cue timing (<code>start</code>, <code>end</code>, <code>text</code>) ready for mobile apps and custom players.</li>
-        <li><strong>Referer Spoofing:</strong> Whitelisted bypass for restricted subtitle hosts (e.g. <code>mysubsplay.com</code>, <code>megaplay.buzz</code>).</li>
-      </ul>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <h3>🛡️ Enterprise Proxy & SSRF Shield</h3>
-      <ul>
-        <li><strong>Zero-Copy Streaming:</strong> Native <code>ReadableStream</code> chunk pipelining for HLS (<code>.m3u8</code> / <code>.ts</code>) video streams.</li>
-        <li><strong>SSRF Domain Allowlist:</strong> Strict domain checking blocks private subnets, localhost, and unauthorized origins.</li>
-        <li><strong>Multi-Node Proxy Pool:</strong> Outbound proxy routing via <code>PROXIES</code> rotation with exponential backoff.</li>
-      </ul>
-    </td>
-    <td width="50%">
-      <h3>📖 Interactive Documentation UI</h3>
-      <ul>
-        <li><strong>Built-in OpenAPI 3.0 Playground:</strong> Live API tester directly at <code>/</code> with instant preset payloads.</li>
-        <li><strong>Developer UX:</strong> Real-time endpoint search, 1-click cURL generators, latency measurement, and mobile drawer view.</li>
-        <li><strong>Strict Typing:</strong> 100% TypeScript coverage with structured response envelopes.</li>
-      </ul>
-    </td>
-  </tr>
+<tr>
+<td width="50%" valign="top">
+
+### 🚀 Scraping core
+- **17 REST endpoints** covering spotlight, latest episodes, recommendations, search, filters, schedule, tooltips and streaming sources
+- **Cheerio + Axios** parsing with header and User-Agent rotation
+- **TTL caching** per endpoint, with `?refresh=1` to bypass it
+
+</td>
+<td width="50%" valign="top">
+
+### 💬 Captions and subtitles
+- **Format conversion:** `.srt`, `.ass` and `.vtt` become standard WebVTT on the fly
+- **JSON cues:** pass `format=json` to get `start`, `end` and `text` for apps and custom players
+- **Referer handling** for restricted subtitle hosts such as `mysubsplay.com` and `megaplay.buzz`
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### 🛡️ Proxy and SSRF protection
+- **Streamed responses:** HLS (`.m3u8` / `.ts`) is piped through as a `ReadableStream`
+- **Domain allowlist** that blocks private subnets, localhost and unknown origins
+- **Proxy pool:** outbound rotation via `PROXIES`, with exponential backoff
+
+</td>
+<td width="50%" valign="top">
+
+### 📖 Built-in docs UI
+- **OpenAPI 3.0 playground** served at `/` with preset payloads
+- **Developer tools:** endpoint search, one-click cURL, latency readout, mobile drawer
+- **Typed end to end:** TypeScript with a consistent response envelope
+
+</td>
+</tr>
 </table>
 
----
+<br/>
 
+<a id="architecture"></a>
 ## 🏛️ Architecture
 
 ```mermaid
 flowchart LR
-    subgraph Client ["Client Layer"]
-        A[Web Player / App / Mobile]
+    subgraph Client["Client"]
+        A["Web player / app / mobile"]
     end
 
-    subgraph API ["Anikoto API Layer (Next.js 16)"]
-        B["Interactive Docs UI (/)"]
-        C["Scraper API Handlers (/api/*)"]
-        D["Captions Converter (/api/captions)"]
-        E["Internal Stream Proxy (/api/proxy)"]
+    subgraph API["Anikoto API (Next.js 16)"]
+        B["Docs UI  /"]
+        C["Scraper handlers  /api/*"]
+        D["Captions converter  /api/captions"]
+        E["Stream proxy  /api/proxy"]
     end
 
-    subgraph Edge ["Optional Edge Proxy"]
-        F["Cloudflare Worker (Streaming Proxy)"]
+    subgraph Edge["Optional edge proxy"]
+        F["Cloudflare Worker"]
     end
 
-    subgraph Upstream ["Upstream Hosts"]
-        G[anikoto.net]
-        H[Megaplay / Vidstream CDN]
-        I[Subtitle CDNs (mysubsplay.com)]
+    subgraph Upstream["Upstream hosts"]
+        G["anikoto.net"]
+        H["Megaplay / Vidstream CDN"]
+        I["Subtitle CDNs (mysubsplay.com)"]
     end
 
     A --> B
-    A -->|Fetch Data| C
-    A -->|Fetch Subtitles| D
-    A -->|Stream Video (HLS)| E
-    A -.->|Direct Edge Stream| F
+    A -->|"Fetch data"| C
+    A -->|"Fetch subtitles"| D
+    A -->|"Stream video (HLS)"| E
+    A -.->|"Direct edge stream"| F
 
-    C -->|Cheerio Scrape| G
-    D -->|Fetch & Convert VTT/SRT/ASS| I
-    E -->|Chunk Pipe| H
-    F -->|Zero-Copy Pipe| H
+    C -->|"Cheerio scrape"| G
+    D -->|"Fetch and convert"| I
+    E -->|"Chunk pipe"| H
+    F -->|"Stream pipe"| H
 ```
 
----
+<br/>
 
+<a id="quick-start"></a>
 ## 🚀 Quick Start
 
-### 1. Clone & Install
+**1. Clone and install**
 
 ```bash
-# Clone the repository
 git clone https://github.com/ayushmadara/anikoto-API.git
 cd anikoto-API
-
-# Install dependencies
 npm install
 ```
 
-### 2. Environment Configuration
+**2. Configure environment**
 
-Create a `.env` file in the root folder:
+Create a `.env` file in the project root:
 
 ```env
-# Upstream target base URL
 BASE_URL=https://anikoto.net
-
-# Optional: CORS allowed origins (default: "*")
 CORS_ALLOWED_ORIGIN=*
-
-# Optional: Cloudflare Worker URL for high-volume video proxying
 # CF_WORKER_URL=https://your-worker-name.workers.dev
-
-# Optional: Public origin of your deployed API
 # PUBLIC_BASE_URL=https://your-api.vercel.app
-
-# Optional: Outbound HTTP/SOCKS proxies for IP rotation
 # PROXIES=http://user:pass@proxy1:8080,http://user:pass@proxy2:8080
 ```
 
-### 3. Run Development Server
+| Variable | Required | Purpose |
+| :--- | :---: | :--- |
+| `BASE_URL` | yes | Upstream site to scrape |
+| `CORS_ALLOWED_ORIGIN` | no | Allowed CORS origin (default `*`) |
+| `CF_WORKER_URL` | no | Route video and subtitle proxying through your Cloudflare Worker |
+| `PUBLIC_BASE_URL` | no | Public origin of your deployed API, used when building proxy URLs |
+| `PROXIES` | no | Comma-separated outbound HTTP/SOCKS proxies for IP rotation |
+
+**3. Run it**
 
 ```bash
-npm run dev
+npm run dev        # http://localhost:3000 opens the docs and live test console
 ```
 
-Visit [http://localhost:3000](http://localhost:3000) to view the interactive documentation and live test console.
-
-### 4. Build for Production
-
 ```bash
-npm run build
+npm run build      # production build
 npm start
 ```
 
----
+<br/>
 
+<a id="api-reference"></a>
 ## 📖 API Reference
 
-Every endpoint delivers a predictable response envelope:
+Every endpoint returns the same envelope:
 
-```json
-// Success Response
-{
-  "ok": true,
-  "cached": true,
-  "data": { ... }
-}
+```jsonc
+// Success
+{ "ok": true, "cached": true, "data": { } }
 
-// Error Response
-{
-  "ok": false,
-  "message": "Error description"
-}
+// Error
+{ "ok": false, "message": "Error description" }
 ```
 
-### Available Endpoints
-
-| Method | Endpoint | Description | Cache TTL |
-| :---: | :--- | :--- | :---: |
-| `GET` | `/api/home` | Spotlight carousel, latest episodes, top anime by day/week/month | 5 min |
-| `GET` | `/api/search?keyword=&page=` | Keyword search with full pagination | 2 min |
-| `GET` | `/api/filter` | Multi-parameter anime search (genres, season, year, sort, type, rating) | 5 min |
-| `GET` | `/api/anime/:slug` | Anime details, synopsis, ratings, and studio information | 30 min |
-| `GET` | `/api/anime/:slug/episodes` | Full episode list with pagination and range filtering | 10 min |
-| `GET` | `/api/anime/:slug/related` | Franchise watch order, sequels, prequels, and side stories | 30 min |
-| `GET` | `/api/anime/:slug/recommendations` | Algorithmic community anime recommendations | 30 min |
-| `GET` | `/api/anime/tooltip/:id` | Quick hovercard data using element `data-tip` ID | 30 min |
-| `GET` | `/api/updated?page=` | Latest updated anime listings from `/latest-updated` | 5 min |
-| `GET` | `/api/widget?name=&page=` | Home tab widgets: `updated-all`, `updated-sub`, `updated-dub`, `trending`, `random` | 5 min |
-| `GET` | `/api/status?type=&page=` | Airing status categories: `currently-airing`, `finished-airing`, `not-yet-aired` | 5 min |
-| `GET` | `/api/genre/:genre?page=` | Category browse by genre slug | 5 min |
-| `GET` | `/api/type/:type?page=` | Filter by media format (`tv`, `movie`, `ova`, `ona`, `special`, `music`) | 5 min |
-| `GET` | `/api/schedule?tz=&images=` | Airing schedule by weekday (optional timezone offset and poster images) | 1 hour |
-| `GET` | `/api/watch/:slug?ep=` | Streaming server sources, HLS m3u8 playlist, subtitles, and intro/outro skip times | 10 min |
-| `GET` | `/api/captions?url=` | Subtitle track fetcher with automatic WebVTT conversion or JSON parsed cues | 24 hours |
-| `GET` | `/api/proxy?url=` | High-volume video and asset streaming proxy with CORS headers | No cache |
-
 > [!TIP]
-> **Cache Bypass:** Add `?refresh=1` to any request to immediately bypass the in-memory cache and trigger a fresh scrape.
+> Add `?refresh=1` to any request to skip the cache and trigger a fresh scrape.
 
----
+> [!NOTE]
+> The cache is in-memory. On serverless hosts such as Vercel it lives per warm instance, so it can reset between cold starts.
 
-## 🎬 Captions & Subtitles Engine
+### 🔎 Discover
 
-Upstream anime CDNs host subtitles in heterogeneous formats (`.vtt`, `.srt`, `.ass`) and block third-party players through strict `Referer` checks.
+| Method | Endpoint | Description | Cache |
+| :---: | :--- | :--- | :---: |
+| `GET` | `/api/home` | Spotlight carousel, latest episodes, top anime by day, week and month | 5 min |
+| `GET` | `/api/search?keyword=&page=` | Keyword search with pagination | 2 min |
+| `GET` | `/api/filter` | Multi-parameter search: genres, season, year, sort, type, rating | 5 min |
+| `GET` | `/api/updated?page=` | Latest updated anime from `/latest-updated` | 5 min |
+| `GET` | `/api/widget?name=&page=` | Home widgets: `updated-all`, `updated-sub`, `updated-dub`, `trending`, `random` | 5 min |
+| `GET` | `/api/schedule?tz=&images=` | Airing schedule by weekday, with optional timezone offset and posters | 1 hour |
 
-The `/api/captions` endpoint solves this completely:
+### 🗂️ Browse
+
+| Method | Endpoint | Description | Cache |
+| :---: | :--- | :--- | :---: |
+| `GET` | `/api/genre/:genre?page=` | Browse by genre slug | 5 min |
+| `GET` | `/api/type/:type?page=` | Browse by format: `tv`, `movie`, `ova`, `ona`, `special`, `music` | 5 min |
+| `GET` | `/api/status?type=&page=` | Airing status: `currently-airing`, `finished-airing`, `not-yet-aired` | 5 min |
+
+### 🎌 Anime details
+
+| Method | Endpoint | Description | Cache |
+| :---: | :--- | :--- | :---: |
+| `GET` | `/api/anime/:slug` | Details, synopsis, ratings and studio | 30 min |
+| `GET` | `/api/anime/:slug/episodes` | Episode list with pagination and range filtering | 10 min |
+| `GET` | `/api/anime/:slug/related` | Watch order, sequels, prequels and side stories | 30 min |
+| `GET` | `/api/anime/:slug/recommendations` | Community recommendations | 30 min |
+| `GET` | `/api/anime/tooltip/:id` | Hovercard data from the element's `data-tip` ID | 30 min |
+
+### 🎬 Watch and media
+
+| Method | Endpoint | Description | Cache |
+| :---: | :--- | :--- | :---: |
+| `GET` | `/api/watch/:slug?ep=` | Server sources, HLS playlist, subtitles, intro and outro skip times | 10 min |
+| `GET` | `/api/captions?url=` | Subtitle fetcher with WebVTT conversion or JSON cues | 24 hours |
+| `GET` | `/api/proxy?url=` | Video and asset streaming proxy with CORS headers | none |
+
+<br/>
+
+<a id="captions-engine"></a>
+## 💬 Captions Engine
+
+Anime CDNs host subtitles in mixed formats (`.vtt`, `.srt`, `.ass`) and block third-party players with strict `Referer` checks. `/api/captions` handles both problems.
+
+<details>
+<summary><b>Example track object from <code>/api/watch/:slug</code></b></summary>
+<br/>
 
 ```json
-// Example track object inside /api/watch/:slug
 {
   "file": "https://qra5z.mysubsplay.com/.../subtitles/eng-2.vtt",
   "label": "English",
@@ -236,130 +246,134 @@ The `/api/captions` endpoint solves this completely:
 }
 ```
 
-### Usage Options
+</details>
 
-1. **Standard WebVTT (`format=vtt` or omitted):**
-   ```html
-   <video controls crossorigin="anonymous">
-     <source src="/api/proxy?url=..." type="application/x-mpegURL">
-     <track label="English" kind="subtitles" srclang="en" src="/api/captions?url=...&referer=https://megaplay.buzz/" default>
-   </video>
-   ```
+### Option 1: WebVTT (default)
 
-2. **Parsed JSON Cues (`format=json`):**
-   ```http
-   GET /api/captions?url=https://...&format=json
-   ```
-   **Response:**
-   ```json
-   {
-     "ok": true,
-     "format": "json",
-     "count": 2,
-     "cues": [
-       {
-         "identifier": "1",
-         "start": "00:01:15.200",
-         "end": "00:01:18.500",
-         "text": "I will become the strongest hunter."
-       }
-     ]
-   }
-   ```
+```html
+<video controls crossorigin="anonymous">
+  <source src="/api/proxy?url=..." type="application/x-mpegURL">
+  <track label="English" kind="subtitles" srclang="en"
+         src="/api/captions?url=...&referer=https://megaplay.buzz/" default>
+</video>
+```
 
-### Running Caption Unit Tests
+> [!NOTE]
+> Native HLS playback only works in Safari. In other browsers, attach the stream with [hls.js](https://github.com/video-dev/hls.js) and keep the same `<track>` element.
 
-Verify the converter without internet access:
+### Option 2: JSON cues
+
+```http
+GET /api/captions?url=https://...&format=json
+```
+
+```json
+{
+  "ok": true,
+  "format": "json",
+  "count": 1,
+  "cues": [
+    {
+      "identifier": "1",
+      "start": "00:01:15.200",
+      "end": "00:01:18.500",
+      "text": "I will become the strongest hunter."
+    }
+  ]
+}
+```
+
+### Tests
+
+The converter tests run offline:
 
 ```bash
 npm run test:captions
 ```
 
----
+<br/>
 
-## ☁️ Cloudflare Worker Proxy
+<a id="cloudflare-worker"></a>
+## ☁️ Cloudflare Worker
 
-For production applications with heavy streaming traffic, deploy the standalone Cloudflare Worker in `cloudflare-worker/` for **free unlimited bandwidth** (100k requests/day free tier).
-
-### Deploying the Worker
+Proxying video through a serverless function can hit bandwidth and duration limits on some hosts. For heavy streaming, deploy the standalone worker in `cloudflare-worker/`. Cloudflare's free plan includes 100k requests per day.
 
 ```bash
-# Navigate to worker directory
 cd cloudflare-worker
-
-# Install Wrangler CLI
-npm install -g wrangler
-
-# Login to Cloudflare
-wrangler login
-
-# Deploy Worker
-wrangler deploy
+npx wrangler login
+npx wrangler deploy
 ```
 
-Once deployed, set the worker URL in your main project `.env`:
+Then point the main project at it:
 
 ```env
 CF_WORKER_URL=https://your-worker-name.workers.dev
 ```
 
-Now, `/api/watch/:slug` will automatically output streaming and subtitle proxy URLs routed through your Cloudflare Worker!
+After that, `/api/watch/:slug` returns stream and subtitle URLs routed through your worker.
 
----
+<br/>
 
+<a id="project-structure"></a>
 ## 🗂️ Project Structure
 
-```
+```text
 anikoto-API/
 ├── src/
 │   ├── app/                      # Next.js 16 App Router
-│   │   ├── page.tsx              # Interactive OpenAPI Documentation UI
-│   │   ├── layout.tsx            # Global Layout & SEO Metadata
-│   │   └── api/                  # 17+ REST Endpoint Routes
-│   │       ├── anime/            # Anime detail, episodes, related, recommendations
-│   │       ├── captions/         # Subtitle fetcher & VTT/SRT/ASS converter
-│   │       ├── filter/           # Advanced search filter
+│   │   ├── page.tsx              # Interactive docs UI
+│   │   ├── layout.tsx            # Layout and SEO metadata
+│   │   └── api/                  # REST routes
+│   │       ├── anime/            # Details, episodes, related, recommendations
+│   │       ├── captions/         # Subtitle fetcher and converter
+│   │       ├── filter/           # Advanced filter
 │   │       ├── home/             # Spotlight and latest episodes
-│   │       ├── proxy/            # Streaming video proxy
+│   │       ├── proxy/            # Streaming proxy
 │   │       ├── schedule/         # Airing calendar
 │   │       ├── search/           # Keyword search
-│   │       └── watch/            # Video sources & subtitle track builder
+│   │       └── watch/            # Sources and subtitle tracks
 │   ├── lib/
 │   │   ├── cache.ts              # In-memory TTL cache
-│   │   ├── constants.ts          # Default settings & headers
-│   │   ├── extractors.ts         # Cheerio DOM parser helpers
-│   │   ├── fetcher.ts            # Resilient HTTP client with retry logic
-│   │   ├── openapi-spec.ts       # Type-safe OpenAPI definition
-│   │   ├── proxy-pool.ts         # SSRF filter & proxy rotation
-│   │   ├── subtitles.ts          # SRT/ASS-to-VTT parser & normalizer
+│   │   ├── constants.ts          # Defaults and headers
+│   │   ├── extractors.ts         # Cheerio parsing helpers
+│   │   ├── fetcher.ts            # HTTP client with retry logic
+│   │   ├── openapi-spec.ts       # OpenAPI definition
+│   │   ├── proxy-pool.ts         # SSRF filter and proxy rotation
+│   │   ├── subtitles.ts          # SRT/ASS to VTT parser
 │   │   └── types.ts              # TypeScript schemas
 │   └── proxy.ts                  # Edge CORS middleware
-├── cloudflare-worker/            # Standalone zero-copy stream proxy
-├── scripts/                      # Test suites & benchmarks
-├── public/                       # Static assets & openapi.yaml
+├── cloudflare-worker/            # Standalone stream proxy
+├── scripts/                      # Tests and benchmarks
+├── public/                       # Static assets and openapi.yaml
 └── README.md
 ```
 
----
+<br/>
 
 ## 🛠️ Tech Stack
 
-- **Framework:** [Next.js 16](https://nextjs.org) (Turbopack, App Router)
-- **Language:** [TypeScript 5](https://www.typescriptlang.org)
-- **Scraping & DOM:** [Cheerio](https://cheerio.js.org) & [Axios](https://axios-http.com)
-- **Caching:** [Node-Cache](https://www.npmjs.com/package/node-cache)
-- **Edge Runtime:** [Cloudflare Workers](https://workers.cloudflare.com)
+<div align="center">
 
----
+<img src="https://img.shields.io/badge/Next.js-0d1117?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js" />
+<img src="https://img.shields.io/badge/TypeScript-0d1117?style=for-the-badge&logo=typescript&logoColor=3178C6" alt="TypeScript" />
+<img src="https://img.shields.io/badge/Cheerio-0d1117?style=for-the-badge&logo=cheerio&logoColor=ccff00" alt="Cheerio" />
+<img src="https://img.shields.io/badge/Axios-0d1117?style=for-the-badge&logo=axios&logoColor=ccff00" alt="Axios" />
+<img src="https://img.shields.io/badge/Cloudflare%20Workers-0d1117?style=for-the-badge&logo=cloudflare&logoColor=F38020" alt="Cloudflare Workers" />
+
+</div>
+
+<br/>
 
 ## 👤 Author
 
-Crafted with care by **[ayushmadara](https://github.com/ayushmadara)**
-
-⭐ If you find this project useful, please consider giving it a **Star** on [GitHub](https://github.com/ayushmadara/anikoto-API)!
-
----
+Built by **[ayushmadara](https://github.com/ayushmadara)**. If this project helps you, a ⭐ on [GitHub](https://github.com/ayushmadara/anikoto-API) is appreciated.
 
 ## 📄 License
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+Released under the **MIT License**. See [LICENSE](LICENSE) for details.
+
+<div align="center">
+
+<img src="https://capsule-render.vercel.app/api?type=waving&height=120&color=0:ccff00,50:1b2a05,100:0d1117&section=footer&animation=twinkling" alt="footer" width="100%" />
+
+</div>
